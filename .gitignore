@@ -3,6 +3,8 @@
 
 Clamp*
 
+config_parameters.yaml
+
 /data
 /mappings
 /temp_files
