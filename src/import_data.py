@@ -1,11 +1,10 @@
 #!/usr/bin/env python
+
+# import libraries
 import pandas as pd
 
 # globals
 CHUNK_SIZE = 10 * 6
-DATA_FILES = {
-    notes_df: "data/NOTEEVENTS.csv",
-}
 
 def read_large_csv(file_name):
     """

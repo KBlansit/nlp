@@ -1,5 +1,8 @@
 *.zip
-/data
 *.pyc
 
 Clamp*
+
+/data
+/mappings
+/temp_files
