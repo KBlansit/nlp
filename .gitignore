@@ -5,6 +5,7 @@ Clamp*
 
 config_parameters.yaml
 
+/tmp
 /data
 /mappings
 /temp_files

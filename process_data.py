@@ -2,7 +2,10 @@
 
 # import libraries
 import os
+import math
 import tempfile
+
+import numpy as np
 import pandas as pd
 
 # import user defined libraries
@@ -23,17 +26,31 @@ NOTE_TYPES = ["Physician "]
 ICU_COLS = ["HADM_ID", "ICUSTAY_ID", "INTIME", "OUTTIME", "LOS"]
 NOTE_COLS = ["HADM_ID", "CHARTTIME", "TEXT", "CATEGORY"]
 
-"""
-NOTES
-- Must cut off notes that occur after discharge
-- Must cut off notes that occur before
-- Uses longest ICU stay if multiple
-ideas:
-    use all valid types of notes within first x hours (multiple of 6?)
+def write_id_notes(curr_df, curr_id, write_dir = None):
+    """
+    given a dataframe, creates
+    """
+    # convert None to '' if necessary
+    write_dir = '' if write_dir is None else "{}/".format(write_dir)
 
- """
+    # write note
+    for index, row in curr_df.iterrows():
+        pd.Series(row["TEXT"]).to_csv("{}{}_{}.csv".format(write_dir, curr_id, index), index=False)
 
- HOUR_PERIODICITY = 8
+def process_initial_impression_notes(merged_df):
+    """
+    takes first 8 hours of notes and writes out for NLP pipeline
+    """
+    # subset data to get initial impression
+    initial_df = merged_df[merged_df["CHARTTIME"] <= merged_df["INTIME"] + pd.Timedelta(hours=8)]
+
+    # move to dict
+    df_dict = {}
+    for curr_id in initial_df["HADM_ID"].unique():
+        df_dict[curr_id] = initial_df[initial_df["HADM_ID"] == curr_id]
+
+    # write out clinical notes
+    [write_id_notes(v, k) for k, v in df_dict.items()]
 
 def read_icu():
     """
@@ -86,6 +103,9 @@ def merge_note_and_icu_dfs(note_df, icu_df):
     # remove note chart data before and after icu stay
     merged_df = merged_df[merged_df["CHARTTIME"] < merged_df["OUTTIME"]]
     merged_df = merged_df[merged_df["CHARTTIME"] >= merged_df["INTIME"]]
+
+    # convert HADM_ID to str
+    merged_df["HADM_ID"] = merged_df["HADM_ID"].astype(int).astype(str)
 
     return merged_df
 
