@@ -122,5 +122,15 @@ def main():
     for f_path in MAPPING_FILES.values():
         assert os.path.isfile(f_path)
 
+    # read in data
+    note_df = read_clinical_notes()
+    icu_df = read_icu()
+
+    # merge data
+    merged_df = merge_note_and_icu_dfs(note_df, icu_df)
+
+    # process merge data
+    process_initial_impression_notes()
+
 if __name__ == '__main__':
     main()
