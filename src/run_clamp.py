@@ -2,10 +2,12 @@
 import os
 import yaml
 
-INPUT_DIR = "/home/kblansit/nlp/ClampCmd_1.3.1/input"
-OUTPUT_DIR = "ClampCmd_1.3.1/output"
+INPUT_DIR = "input"
+OUTPUT_DIR = "output"
 
 CONFIG_PATH = "config_parameters.yaml"
+
+CLAMP_DIR = "ClampCmd_1.3.1"
 
 def run_clamp():
     """
@@ -22,19 +24,20 @@ def run_clamp():
     cmd_dict = {}
 
     # input and output information
-    cmd_dict['input_cmd'] = INPUT_DIR
-    cmd_dict['output_cmd'] = OUTPUT_DIR
+    cmd_dict['input_cmd'] = os.path.join(CLAMP_DIR, INPUT_DIR)
+    cmd_dict['output_cmd'] = os.path.join(CLAMP_DIR, OUTPUT_DIR)
 
     # clamp information
-    cmd_dict['clamp_bin'] = "ClampCmd_1.3.1/bin/clamp-nlp-1.3.1-jar-with-dependencies.jar"
-    cmd_dict['pipeline'] = "ClampCmd_1.3.1/pipeline/clamp-ner-attribute.pipeline.jar"
-    cmd_dict['umls_index'] = "ClampCmd_1.3.1/resource/umls_index/"
+    cmd_dict['clamp_bin'] = os.path.join(CLAMP_DIR, "bin/clamp-nlp-1.3.1-jar-with-dependencies.jar")
+    cmd_dict['pipeline'] = os.path.join(CLAMP_DIR, "pipeline/clamp-ner-attribute.pipeline.jar")
+    cmd_dict['umls_index'] = os.path.join(CLAMP_DIR, "resource/umls_index/")
+    cmd_dict['license'] = os.path.join(CLAMP_DIR, "CLAMP.LICENSE")
 
     # umls information
     cmd_dict['umls_name'] = config["UMLS_USER_NAME"]
     cmd_dict['umls_pass'] = config["UMLS_USER_PASS"]
 
-    cmd = 'java -DCLAMPLicenceFile="ClampCmd_1.3.1/CLAMP.LICENSE" -Xmx2g -cp {clamp_bin} edu.uth.clamp.nlp.main.PipelineMain'.format(**cmd_dict)
+    cmd = 'java -DCLAMPLicenceFile={license} -Xmx2g -cp {clamp_bin} edu.uth.clamp.nlp.main.PipelineMain'.format(**cmd_dict)
     cmd = cmd + " \
         -i {input_cmd}\
         -o {output_cmd}\
