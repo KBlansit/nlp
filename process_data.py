@@ -41,16 +41,18 @@ def process_initial_impression_notes(merged_df):
     """
     takes first 8 hours of notes and writes out for NLP pipeline
     """
+    # console message
+    print("Processing initial data")
     # subset data to get initial impression
     initial_df = merged_df[merged_df["CHARTTIME"] <= merged_df["INTIME"] + pd.Timedelta(hours=8)]
 
     # move to dict
     df_dict = {}
     for curr_id in initial_df["HADM_ID"].unique():
-        df_dict[curr_id] = initial_df[initial_df["HADM_ID"] == curr_id]
+        df_dict[curr_id] = initial_df[initial_df["HADM_ID"] == curr_id].reset_index()
 
     # write out clinical notes
-    [write_id_notes(v, k) for k, v in df_dict.items()]
+    [write_id_notes(v, k, "tmp") for k, v in df_dict.items()]
 
 def read_icu():
     """
