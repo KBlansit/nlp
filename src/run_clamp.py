@@ -2,16 +2,14 @@
 import os
 import yaml
 
-INPUT_DIR = "input"
-OUTPUT_DIR = "output"
-
 CONFIG_PATH = "config_parameters.yaml"
 
 CLAMP_DIR = "ClampCmd_1.3.1"
 
-def run_clamp():
+def run_clamp(output_dir, input_dir):
     """
     runs clamp
+    NOTE: Remember that mapping using partial uses last arguement
     """
     # console message
     print("Running Clamp")
@@ -24,8 +22,8 @@ def run_clamp():
     cmd_dict = {}
 
     # input and output information
-    cmd_dict['input_cmd'] = os.path.join(CLAMP_DIR, INPUT_DIR)
-    cmd_dict['output_cmd'] = os.path.join(CLAMP_DIR, OUTPUT_DIR)
+    cmd_dict['input_cmd'] = input_dir
+    cmd_dict['output_cmd'] = output_dir
 
     # clamp information
     cmd_dict['clamp_bin'] = os.path.join(CLAMP_DIR, "bin/clamp-nlp-1.3.1-jar-with-dependencies.jar")
