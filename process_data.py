@@ -38,7 +38,7 @@ def read_icu():
     print("Reading in icu information")
 
     # read in data
-    icu_df = read_large_csv(DATA_FILES["icu_df"])
+    icu_df = pd.read_csv(DATA_FILES["icu_df"])
 
     # convert to datetime
     icu_df["INTIME"] = pd.to_datetime(icu_df["INTIME"])
