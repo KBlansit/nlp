@@ -12,7 +12,7 @@ from functools import partial
 from multiprocessing import Pool
 
 # import user defined libraries
-from src.import_data import read_large_csv
+from src.utility import read_large_csv
 from src.run_clamp import run_clamp
 
 # script variables
@@ -22,7 +22,7 @@ DATA_FILES = {
 }
 
 MAPPING_FILES = {
-    "ccs_mapping": "mappings/ccs_dx_icd10.csv",
+    "ccs_mapping": "mappings/icd9_ccs_mapping.csv",
 }
 
 NOTE_TYPES = ["Physician "]

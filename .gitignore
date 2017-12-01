@@ -1,6 +1,8 @@
 *.zip
 *.pyc
 
+.ftpconfig
+
 Clamp*
 
 config_parameters.yaml
@@ -8,3 +10,4 @@ config_parameters.yaml
 /data
 /mappings
 /tmp_dir
+/tempfiles
