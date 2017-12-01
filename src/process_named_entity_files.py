@@ -4,6 +4,8 @@
 import os
 import re
 
+import numpy as np
+
 # import user defined libraries
 from src.map_cui_codes import CUI_CCS_Mapper
 

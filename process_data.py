@@ -2,6 +2,7 @@
 
 # import libraries
 import os
+import h5py
 import math
 import tempfile
 
@@ -12,8 +13,8 @@ from functools import partial
 from multiprocessing import Pool
 
 # import user defined libraries
-from src.utility import read_large_csv
 from src.run_clamp import run_clamp
+from src.utility import read_large_csv, hot_encode_list, create_data_dir
 
 # script variables
 DATA_FILES = {
@@ -27,8 +28,16 @@ ICU_COLS = ["HADM_ID", "ICUSTAY_ID", "INTIME", "OUTTIME", "LOS"]
 NOTE_COLS = ["HADM_ID", "CHARTTIME", "TEXT", "CATEGORY"]
 
 TEMP_DIR = "tmp_dir"
+OUTPUT_DIR = "processed_data"
+
+HOUR_STRETCH = 8
 
 NUM_OF_ITERS = 10
+
+# parse command line args
+cmd_parse = argparse.ArgumentParser(description = 'Application for making training data')
+cmd_parse.add_argument('-o', '--output', help = 'output data directory name', type=str)
+cmd_args = cmd_parse.parse_args()
 
 def read_icu():
     """
@@ -106,7 +115,7 @@ def process_initial_impression_notes(merged_df):
     # console message
     print("Processing initial data")
     # subset data to get initial impression
-    initial_df = merged_df[merged_df["CHARTTIME"] <= merged_df["INTIME"] + pd.Timedelta(hours=8)]
+    initial_df = merged_df[merged_df["CHARTTIME"] <= merged_df["INTIME"] + pd.Timedelta(hours=HOUR_STRETCH)]
 
     # make iter index
     initial_df["iter"] = (initial_df.reset_index().index % NUM_OF_ITERS)
@@ -156,6 +165,27 @@ def async_clamp_run(input_file_base):
     # clean up
     p.close()
 
+def create_input_matrix(id_dict, icu_df):
+    """
+    takes dictionary of
+    """
+    # store as tuple
+    id_tuples = [(k, v) for k, v in id_dict.items()]
+
+    # hot encode
+    encode_lst = [hot_encode_list(x[1]) for x in id_tuples]
+
+    # turn into matrix
+    all_x = np.vstack(encode_lst)
+
+    # get ids into a list
+    id_series = pd.Series({'HADM_ID': [x[0] for x in id_tuples]})
+
+    # turn i
+    all_y = pd.merge(id_series, icu_df, how='left')['LOS'].values
+
+    return all_x, all_y
+
 def main():
     """
     main function
@@ -179,6 +209,28 @@ def main():
 
     # run clamp
     async_clamp_run(tmp_d.name)
+
+    # process named entity files
+    id_dict = read_all_processed_files(tmp_d.name)
+
+    # write new data set and return object
+    if cmd_args.output is None:
+        write_path = create_data_dir(OUTPUT_DIR, 0)
+    else:
+        write_path = create_data_dir(OUTPUT_DIR, cmd_args.output)
+
+    # make new data directory
+    data_file = h5py.File(write_path + "/data.hdf5", "w")
+
+    # make training data
+    all_x, all_y = create_input_matrix(id_dict, merged_df)
+
+    # move to hd5f
+    data_file['all_x'] = all_x
+    data_file['all_y'] = all_y
+
+    # close file
+    data_file.close()
 
 if __name__ == '__main__':
     main()

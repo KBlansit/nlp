@@ -10,3 +10,4 @@ config_parameters.yaml
 /data
 /mappings
 /tmp_dir
+/processed_data
