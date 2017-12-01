@@ -21,10 +21,6 @@ DATA_FILES = {
     "notes_df": "data/NOTEEVENTS.csv",
 }
 
-MAPPING_FILES = {
-    "ccs_mapping": "mappings/icd9_ccs_mapping.csv",
-}
-
 NOTE_TYPES = ["Physician "]
 
 ICU_COLS = ["HADM_ID", "ICUSTAY_ID", "INTIME", "OUTTIME", "LOS"]
