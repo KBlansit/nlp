@@ -38,7 +38,7 @@ NUM_OF_ITERS = 10
 
 # parse command line args
 cmd_parse = argparse.ArgumentParser(description = 'Application for making training data')
-cmd_parse.add_argument('-o', '--output', help = 'output data directory name', type=str)
+cmd_parse.add_argument('-d', '--data_path', help = 'output data path name', type=str)
 cmd_args = cmd_parse.parse_args()
 
 def read_icu():
@@ -184,9 +184,9 @@ def create_input_matrix(id_dict, icu_df):
     all_x = np.vstack(encode_lst)
 
     # get ids into a list
-    id_series = pd.Series({'HADM_ID': [x[0] for x in id_tuples]})
+    id_series = pd.DataFrame({"HADM_ID": [int(x[0]) for x in id_tuples]})
 
-    # turn i
+    # turn into
     all_y = pd.merge(id_series, icu_df, how='left')['LOS'].values
 
     return all_x, all_y
@@ -216,7 +216,7 @@ def main():
     id_dict = read_all_processed_files(tmp_d.name)
 
     # write new data set and return object
-    if cmd_args.output is None:
+    if cmd_args.data_path is None:
         write_path = create_data_dir(OUTPUT_DIR, 0)
     else:
         write_path = create_data_dir(OUTPUT_DIR, cmd_args.output)
@@ -225,7 +225,7 @@ def main():
     data_file = h5py.File(write_path + "/data.hdf5", "w")
 
     # make training data
-    all_x, all_y = create_input_matrix(id_dict, merged_df)
+    all_x, all_y = create_input_matrix(id_dict, icu_df)
 
     # move to hd5f
     data_file['all_x'] = all_x
@@ -237,6 +237,17 @@ def main():
 if __name__ == '__main__':
 
     #HACK
+    # read in data
+    #note_df = read_clinical_notes()
+    icu_df = read_icu()
 
-    read_all_processed_files("tmp_dir/tmp/")
+    # merge data
+    #merged_df = merge_note_and_icu_dfs(note_df, icu_df)
+
+    id_dict = read_all_processed_files("tmp_dir/tmp/")
+
+    all_x, all_y = create_input_matrix(id_dict, icu_df)
+
+
+    import pdb; pdb.set_trace()
     #main()

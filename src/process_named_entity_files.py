@@ -3,6 +3,7 @@
 # import libraries
 import os
 import re
+import progressbar
 
 import numpy as np
 
@@ -36,8 +37,14 @@ def read_all_processed_files(file_path):
     # initialize mapper
     mapper = CUI_CCS_Mapper()
 
+    # initialize bar
+    bar = progressbar.ProgressBar()
+
+    # console message
+    print("Processing named entity files")
+
     # iterate over files
-    for curr_file in all_files:
+    for curr_file in bar(all_files):
         # extract id
         curr_id = ID_REGEX.search(curr_file).group()
 
@@ -50,7 +57,7 @@ def read_all_processed_files(file_path):
         # determine full path
         curr_file = os.path.join(file_path, curr_file)
 
-        # opn file
+        # open file
         with open(curr_file) as f:
             # iterate through lines
             for line in f:
@@ -61,6 +68,7 @@ def read_all_processed_files(file_path):
                     ccs_lst = ccs_lst + mapper.get_ccs_codes(cui_code)
 
         # find unique ccs codes
+        ccs_lst = [int(x) for x in ccs_lst]
         ccs_lst = list(set(ccs_lst))
 
         # return to dictionary

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # import libraries
+import numpy as np
 import pandas as pd
 
 # script variables
@@ -64,20 +65,3 @@ def read_large_csv(file_path):
     # chunk data
     reader = pd.read_csv(file_path, chunksize=CHUNK_SIZE)
     return pd.concat(reader, ignore_index=True)
-
-# following code borrowed from the following project
-# https://github.com/kshedden/icd9/blob/master/icd9/conversions.py
-def _zero_pad(x, n=3):
-    if len(x) < n:
-        x = (n - len(x)) * "0" + x
-    return x
-
-def decimal_to_short(code):
-    """
-    Convert an ICD9 code from decimal format to short format.
-    """
-
-    parts = code.split(".")
-    parts[0] = _zero_pad(parts[0])
-
-    return "".join(parts)

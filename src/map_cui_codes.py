@@ -83,6 +83,7 @@ class CUI_CCS_Mapper:
 
     def get_icd_10_code(self, cui_code):
         """
+        takes cui and returns a list of cui codes
         """
         # get single use token
         sst = self.make_sst_request()
@@ -116,9 +117,6 @@ class CUI_CCS_Mapper:
 
                 # convert to list
                 curr_ccs_lst = curr_ccs_lst + ccs_codes.astype("str").tolist()
-
-        #if not len(curr_ccs_lst):
-        #    import pdb; pdb.set_trace()
 
         return curr_ccs_lst
 
@@ -169,10 +167,7 @@ class CUI_CCS_Mapper:
             ccs_lst = self.request_ccs_code(cui_code)
 
             # find unique codes
-            try:
-                ccs_lst = list(set(ccs_lst))
-            except:
-                import pdb; pdb.set_trace()
+            ccs_lst = list(set(ccs_lst))
 
             # add ccs codes to dictionary
             self.cui_css_map[cui_code] = ccs_lst
