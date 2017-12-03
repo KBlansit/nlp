@@ -4,6 +4,7 @@
 import os
 import h5py
 import math
+import argparse
 import tempfile
 
 import numpy as np
@@ -14,6 +15,7 @@ from multiprocessing import Pool
 
 # import user defined libraries
 from src.run_clamp import run_clamp
+from src.process_named_entity_files import read_all_processed_files
 from src.utility import read_large_csv, hot_encode_list, create_data_dir
 
 # script variables
@@ -93,6 +95,9 @@ def merge_note_and_icu_dfs(note_df, icu_df):
 
     # convert HADM_ID to str
     merged_df["HADM_ID"] = merged_df["HADM_ID"].astype(int).astype(str)
+
+    # HACK
+    merged_df = merged_df.reset_index().loc[:60]
 
     return merged_df
 
@@ -194,9 +199,6 @@ def main():
     for f_path in DATA_FILES.values():
         assert os.path.isfile(f_path)
 
-    for f_path in MAPPING_FILES.values():
-        assert os.path.isfile(f_path)
-
     # read in data
     note_df = read_clinical_notes()
     icu_df = read_icu()
@@ -233,4 +235,8 @@ def main():
     data_file.close()
 
 if __name__ == '__main__':
-    main()
+
+    #HACK
+
+    read_all_processed_files("tmp_dir/tmp/")
+    #main()

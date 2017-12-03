@@ -20,7 +20,7 @@ def create_data_dir(path, dir_name=False):
     OUTPUT:
         path to new directory
     """
-    
+
     if not dir_name:
         # create new path of Day Month Year
         write_path = path + "/" + time.strftime("%d-%m-%Y")
@@ -61,7 +61,23 @@ def read_large_csv(file_path):
     """
     reads large dataframe
     """
-
     # chunk data
     reader = pd.read_csv(file_path, chunksize=CHUNK_SIZE)
     return pd.concat(reader, ignore_index=True)
+
+# following code borrowed from the following project
+# https://github.com/kshedden/icd9/blob/master/icd9/conversions.py
+def _zero_pad(x, n=3):
+    if len(x) < n:
+        x = (n - len(x)) * "0" + x
+    return x
+
+def decimal_to_short(code):
+    """
+    Convert an ICD9 code from decimal format to short format.
+    """
+
+    parts = code.split(".")
+    parts[0] = _zero_pad(parts[0])
+
+    return "".join(parts)

@@ -2,25 +2,32 @@
 
 # import libraries
 import re
+import yaml
 import requests
 
+import pandas as pd
+
 from bs4 import BeautifulSoup
+
+from src.utility import decimal_to_short
 
 # script variables
 CONFIG_PATH = "config_parameters.yaml"
 
 TGT_URL = "https://utslogin.nlm.nih.gov/cas/v1/api-key"
 
-UMLSKS_KEY = {'service':'http://umlsks.nlm.nih.gov'}
+UMLSKS_KEY = {"service": "http://umlsks.nlm.nih.gov"}
+
+BASE_CUI_URI = ""
 
 CODE_REGEX = re.compile("([0-9]+\.?[0-9]+$)")
+
+ICD_10_CODE_REGEX = re.compile("([A-Z, a-z, 0-9]+\.?[0-9]+$)")
 
 MAPPING_FILES = {
     "ccs_mapping_icd_9": "mappings/icd9_ccs_mapping.csv",
     "ccs_mapping_icd_10": "mappings/icd10_ccs_mapping.csv",
 }
-
-ICD_TYPES = [9, 10]
 
 # load API_KEY
 with open(CONFIG_PATH, "r") as config_f:
@@ -41,9 +48,9 @@ class CUI_CCS_Mapper:
         # NOTE: remove first line of mapping file, remove all quotes
         # console message
         print("Loading CCS Mapping Data")
-        
+
         # read in mapping files
-        for k, v in MAPPING_FILES.itme():
+        for k, v in MAPPING_FILES.items():
             setattr(self, k, pd.read_csv(v))
 
     def make_tgt_request(self):
@@ -57,83 +64,115 @@ class CUI_CCS_Mapper:
         assert r.ok
 
         # parse document
-        soup = BeautifulSoup(r.text, 'html.parser')
+        soup = BeautifulSoup(r.text, "html.parser")
 
         # set target link
-        self.target_link = soup.find('form').get('action')
+        self.target_link = soup.find("form").get("action")
 
-    @staticmethod
-    def make_sst_request(target_link):
+    def make_sst_request(self):
         """
         gets a single time use key
         """
         # make post request
-        r = request.post(target_link, data=UMLSKS_KEY)
+        r = requests.post(self.target_link, data=UMLSKS_KEY)
 
         # make sure request is okay
         assert r.ok
 
         return r.text
 
-    def icd_code_ccs_mapper(self, cui_code, code_type):
+    def get_icd_10_code(self, cui_code):
         """
-        maps icd code to ccs code
         """
-        # validate code
-        if code_type not in ICD_TYPES:
-            raise AssertionError("{} is not a valid code type".format(code_type))
-
         # get single use token
-        sst = self.make_sst_request(target_link)
+        sst = self.make_sst_request()
+
+        # format url
+        url = "https://uts-ws.nlm.nih.gov/rest/content/current/CUI/{}/atoms?language=ENG&sabs=ICD10CM&ticket={}".format(cui_code, sst)
 
         # send get request
-        r = requests.get()
+        r = requests.get(url)
 
-        # determine map type
-        curr_ccs_map = getattr(self, "ccs_mapping_icd_{}".format(code_type))
+        # initialize output list
+        curr_ccs_lst = []
 
-        # determine code type
-        code_type = "ICD-{}-CM_CODE".format(code_type)
+        # check if we get a valid response
+        if r.ok:
 
-        # format urls
-        url = "https://uts-ws.nlm.nih.gov/rest/content/current/CUI/{}\
-            /atoms?language=ENG&sabs=ICD{}CM&ticket={}".format(cui_code, code_type, sst)
+            # get ccs map
+            ccs_map = self.ccs_mapping_icd_10
+            code_col = "ICD-10-CM_CODE"
 
-        # initialize list of ccs codes
-        curr_css_lst = []
+            # iterate through results
+            for rslt_code in r.json()["result"]:
+                # get icd10 code
+                match = ICD_10_CODE_REGEX.search(rslt_code["code"]).groups()[0]
 
-        # iterate over results
-        for rslt_code in r.json()['results']:
-            # get icd code
-            icd_code = CODE_REGEX.search(rslt_code['code']).group().replace('.', '')
+                # strip decimal
+                match = match.replace(".", "")
 
-            # get ccs code
-            ccs_lst.append(ccs_map[ccs_map[] == icd_code]["CCS_CATEGORY"].values[0])
+                # map to ccs
+                ccs_codes = ccs_map[ccs_map[code_col].str.strip() == match]["CCS_CATEGORY"]
+
+                # convert to list
+                curr_ccs_lst = curr_ccs_lst + ccs_codes.astype("str").tolist()
+
+        #if not len(curr_ccs_lst):
+        #    import pdb; pdb.set_trace()
 
         return curr_ccs_lst
 
-    def get_ccs_code(self, cui_code):
+    def request_ccs_code(self, cui_code):
+        """
+        returns list of ccs associated with cui code
+        """
+        # get single use token
+        sst = self.make_sst_request()
+
+        # format url
+        url = "https://uts-ws.nlm.nih.gov/rest/content/current/CUI/{}/atoms?sabs=CCS_10&ticket={}".format(cui_code, sst)
+
+        # initialize list of ccs codes
+        curr_ccs_lst = []
+
+        # send get request
+        r = requests.get(url)
+
+        # check if we get a valid response
+        if r.ok:
+            # iterate over results
+            for rslt_code in r.json()["result"]:
+                if rslt_code["termType"] == "SD":
+                    curr_ccs_lst.append(CODE_REGEX.search(rslt_code["code"]).group())
+
+        # if cannot directly infer mapping, look though icd 10 code
+        else:
+            curr_ccs_lst = curr_ccs_lst + self.get_icd_10_code(cui_code)
+
+        return curr_ccs_lst
+
+    def get_ccs_codes(self, cui_code):
         """
         map a cui code to ccs concept codes
         """
 
         # determine if already defined
         if cui_code in self.cui_css_map.keys():
-            return self.cui_css_map["cui_code"]
+            return self.cui_css_map[cui_code]
         # else construct request
         else:
             # get a new tgt key if necessary
-            if not hasattr(self, target_link):
+            if not hasattr(self, "target_link"):
                 self.make_tgt_request()
 
             # iterate over icd types
-            ccs_lst = [self.icd_code_ccs_mapper(cui_code, x) for x in ICD_TYPES]
-
-            # unlist list of lists
-            ccs_lst = [x for y in ccs_lst for x in y]
+            ccs_lst = self.request_ccs_code(cui_code)
 
             # find unique codes
-            ccs_lst = list(set(ccs_lst))
+            try:
+                ccs_lst = list(set(ccs_lst))
+            except:
+                import pdb; pdb.set_trace()
 
             # add ccs codes to dictionary
             self.cui_css_map[cui_code] = ccs_lst

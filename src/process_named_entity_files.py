@@ -57,7 +57,7 @@ def read_all_processed_files(file_path):
                 # test against regex
                 regex_rslt = PROBLEM_REGEX.search(line)
                 if regex_rslt:
-                    cui_code = regex_rslt.group()
+                    cui_code = regex_rslt.groups()[0]
                     ccs_lst = ccs_lst + mapper.get_ccs_codes(cui_code)
 
         # find unique ccs codes
