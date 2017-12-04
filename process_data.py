@@ -25,7 +25,7 @@ OUTPUT_DIR = "processed_data"
 
 HOUR_STRETCH = 8
 
-NUM_OF_ITERS = 10
+NUM_OF_ITERS = 12
 
 # parse command line args
 cmd_parse = argparse.ArgumentParser(description = "Application for making training data")
@@ -161,7 +161,7 @@ def main():
     note_df, icu_df = read_in_data()
 
     # override existing clamp
-    if cmd_args.overrride_clamp:
+    if cmd_args.overrride_clamp or not os.path.exists(os.path.join(TEMP_DIR, "named_entities")):
         # make temp file
         if cmd_args.temp_dir:
             tmp_d = tempfile.TemporaryDirectory(dir=TEMP_DIR)

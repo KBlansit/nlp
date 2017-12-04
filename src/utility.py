@@ -10,7 +10,7 @@ import pandas as pd
 # script variables
 CHUNK_SIZE = 10 * 6
 
-CCS_CATEGORIES = 2621
+CCS_CATEGORIES = 2621 + 1
 
 def create_data_dir(path, dir_name=False):
     """
