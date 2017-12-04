@@ -9,8 +9,6 @@ import pandas as pd
 
 from bs4 import BeautifulSoup
 
-from src.utility import decimal_to_short
-
 # script variables
 CONFIG_PATH = "config_parameters.yaml"
 
@@ -25,8 +23,8 @@ CODE_REGEX = re.compile("([0-9]+\.?[0-9]+$)")
 ICD_10_CODE_REGEX = re.compile("([A-Z, a-z, 0-9]+\.?[0-9]+$)")
 
 MAPPING_FILES = {
-    "ccs_mapping_icd_9": "mappings/icd9_ccs_mapping.csv",
     "ccs_mapping_icd_10": "mappings/icd10_ccs_mapping.csv",
+    "cui_icd10_map": "cui_icd10_map.csv",
 }
 
 # load API_KEY

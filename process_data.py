@@ -37,8 +37,11 @@ HOUR_STRETCH = 8
 NUM_OF_ITERS = 10
 
 # parse command line args
-cmd_parse = argparse.ArgumentParser(description = 'Application for making training data')
-cmd_parse.add_argument('-d', '--data_path', help = 'output data path name', type=str)
+cmd_parse = argparse.ArgumentParser(description = "Application for making training data")
+cmd_parse.add_argument("-d", "--data_path", help = "output data path name", type=str)
+cmd_parse.add_argument("-t", "--temp_dir", help = "use a temp dir", type=bool, default=False)
+cmd_parse.add_argument("-c", "--overrride_clamp", help = "override temp ", type=bool, default=False)
+cmd_parse.add_argument("-u", "--override_umls", help = "overrides umls", type=bool, default=False)
 cmd_args = cmd_parse.parse_args()
 
 def read_icu():
@@ -96,9 +99,6 @@ def merge_note_and_icu_dfs(note_df, icu_df):
     # convert HADM_ID to str
     merged_df["HADM_ID"] = merged_df["HADM_ID"].astype(int).astype(str)
 
-    # HACK
-    merged_df = merged_df.reset_index().loc[:60]
-
     return merged_df
 
 def write_id_notes(curr_df, curr_id, write_dir):
@@ -113,7 +113,7 @@ def write_id_notes(curr_df, curr_id, write_dir):
         f_name = os.path.join(write_dir, "{}_{}.txt".format(curr_id, index))
         pd.Series(row["TEXT"]).to_csv(f_name, index=False)
 
-def process_initial_impression_notes(merged_df):
+def process_initial_impression_notes(merged_df, file_path):
     """
     takes first 8 hours of notes and writes out for NLP pipeline
     """
@@ -130,12 +130,9 @@ def process_initial_impression_notes(merged_df):
     for curr_id in initial_df["HADM_ID"].unique():
         df_dict[curr_id] = initial_df[initial_df["HADM_ID"] == curr_id].reset_index()
 
-    # make temp file
-    tmp_d = tempfile.TemporaryDirectory(dir=TEMP_DIR)
-
     # make output dirs
     for curr_sub_dir in range(0, NUM_OF_ITERS):
-        curr_sub_dir = os.path.join(tmp_d.name, str(curr_sub_dir))
+        curr_sub_dir = os.path.join(file_path, str(curr_sub_dir))
         if not os.path.exists(curr_sub_dir):
             os.makedirs(curr_sub_dir)
 
@@ -143,9 +140,7 @@ def process_initial_impression_notes(merged_df):
     print("Writing notes")
 
     # write out clinical notes
-    [write_id_notes(v, k, tmp_d.name) for k, v in df_dict.items()]
-
-    return tmp_d
+    [write_id_notes(v, k, file_path) for k, v in df_dict.items()]
 
 def async_clamp_run(input_file_base):
     """
@@ -203,17 +198,28 @@ def main():
     note_df = read_clinical_notes()
     icu_df = read_icu()
 
-    # merge data
-    merged_df = merge_note_and_icu_dfs(note_df, icu_df)
+    # override existing clamp
+    if cmd_args.overrride_clamp:
+        # make temp file
+        if cmd_args.temp_dir:
+            tmp_d = tempfile.TemporaryDirectory(dir=TEMP_DIR)
+            tmp_path = tmp_d.name
+        else:
+            tmp_path = TEMP_DIR
 
-    # process merge data
-    tmp_d = process_initial_impression_notes(merged_df)
+        # merge data
+        merged_df = merge_note_and_icu_dfs(note_df, icu_df)
 
-    # run clamp
-    async_clamp_run(tmp_d.name)
+        # process merge data
+        process_initial_impression_notes(merged_df, tmp_path)
+
+        # run clamp
+        async_clamp_run(tmp_path)
+    else:
+        tmp_path = TEMP_DIR
 
     # process named entity files
-    id_dict = read_all_processed_files(tmp_d.name)
+    id_dict = read_all_processed_files(tmp_path)
 
     # write new data set and return object
     if cmd_args.data_path is None:
@@ -235,19 +241,4 @@ def main():
     data_file.close()
 
 if __name__ == '__main__':
-
-    #HACK
-    # read in data
-    #note_df = read_clinical_notes()
-    icu_df = read_icu()
-
-    # merge data
-    #merged_df = merge_note_and_icu_dfs(note_df, icu_df)
-
-    id_dict = read_all_processed_files("tmp_dir/tmp/")
-
-    all_x, all_y = create_input_matrix(id_dict, icu_df)
-
-
-    import pdb; pdb.set_trace()
-    #main()
+    main()
