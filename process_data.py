@@ -14,20 +14,11 @@ from functools import partial
 from multiprocessing import Pool
 
 # import user defined libraries
+from initialize_data import DATA_PATH
+
 from src.run_clamp import run_clamp
 from src.process_named_entity_files import read_all_processed_files
-from src.utility import read_large_csv, hot_encode_list, create_data_dir
-
-# script variables
-DATA_FILES = {
-    "icu_df":   "data/ICUSTAYS.csv",
-    "notes_df": "data/NOTEEVENTS.csv",
-}
-
-NOTE_TYPES = ["Physician "]
-
-ICU_COLS = ["HADM_ID", "ICUSTAY_ID", "INTIME", "OUTTIME", "LOS"]
-NOTE_COLS = ["HADM_ID", "CHARTTIME", "TEXT", "CATEGORY"]
+from src.utility import hot_encode_list, create_data_dir
 
 TEMP_DIR = "tmp_dir"
 OUTPUT_DIR = "processed_data"
@@ -44,43 +35,16 @@ cmd_parse.add_argument("-c", "--overrride_clamp", help = "override temp ", type=
 cmd_parse.add_argument("-u", "--override_umls", help = "overrides umls", type=bool, default=False)
 cmd_args = cmd_parse.parse_args()
 
-def read_icu():
+def read_in_data():
     """
-    reads icu information
-    """
-    # console message
-    print("Reading in icu information")
-
-    # read in data
-    icu_df = pd.read_csv(DATA_FILES["icu_df"])
-
-    # convert to datetime
-    icu_df["INTIME"] = pd.to_datetime(icu_df["INTIME"])
-    icu_df["OUTTIME"] = pd.to_datetime(icu_df["OUTTIME"])
-
-    # use longest LOS if multiple
-    icu_df = icu_df.sort_values("LOS", ascending=False).groupby("HADM_ID", as_index=False).first()
-
-    return icu_df[ICU_COLS]
-
-def read_clinical_notes():
-    """
-    reads and validates notes
+    reads in data from hdf5 file
     """
     # console message
-    print("Reading in clinical notes")
+    print("Reading in data")
+    note_df = pd.read_hdf(DATA_PATH, "note_df")
+    icu_df = pd.read_hdf(DATA_PATH, "icu_df")
 
-    # read in data
-    note_df = read_large_csv(DATA_FILES["notes_df"])
-
-    # convert to datetime
-    note_df["CHARTTIME"] = pd.to_datetime(note_df["CHARTTIME"])
-
-    # subset on note type and remove error notes
-    note_df = note_df[note_df["CATEGORY"].isin(NOTE_TYPES)]
-    node_df = note_df[note_df["ISERROR"] != 1]
-
-    return note_df[NOTE_COLS]
+    return note_df, icu_df
 
 def merge_note_and_icu_dfs(note_df, icu_df):
     """
@@ -191,12 +155,10 @@ def main():
     main function
     """
     # check all data is present
-    for f_path in DATA_FILES.values():
-        assert os.path.isfile(f_path)
+    assert os.path.isfile(DATA_PATH)
 
     # read in data
-    note_df = read_clinical_notes()
-    icu_df = read_icu()
+    note_df, icu_df = read_in_data()
 
     # override existing clamp
     if cmd_args.overrride_clamp:

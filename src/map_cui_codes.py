@@ -48,6 +48,7 @@ class CUI_CCS_Mapper:
         print("Loading CCS Mapping Data")
 
         # read in mapping files
+        import pdb; pdb.set_trace()
         for k, v in MAPPING_FILES.items():
             setattr(self, k, pd.read_csv(v))
 
@@ -157,6 +158,13 @@ class CUI_CCS_Mapper:
             return self.cui_css_map[cui_code]
         # else construct request
         else:
+            import pdb; pdb.set_trace()
+
+
+
+
+
+
             # get a new tgt key if necessary
             if not hasattr(self, "target_link"):
                 self.make_tgt_request()
