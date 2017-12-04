@@ -5,6 +5,7 @@ import re
 import yaml
 import requests
 
+import numpy as np
 import pandas as pd
 
 from bs4 import BeautifulSoup
@@ -24,7 +25,7 @@ ICD_10_CODE_REGEX = re.compile("([A-Z, a-z, 0-9]+\.?[0-9]+$)")
 
 MAPPING_FILES = {
     "ccs_mapping_icd_10": "mappings/icd10_ccs_mapping.csv",
-    "cui_icd10_map": "cui_icd10_map.csv",
+    "cui_map": "mappings/cui_map.csv",
 }
 
 # load API_KEY
@@ -48,7 +49,6 @@ class CUI_CCS_Mapper:
         print("Loading CCS Mapping Data")
 
         # read in mapping files
-        import pdb; pdb.set_trace()
         for k, v in MAPPING_FILES.items():
             setattr(self, k, pd.read_csv(v))
 
@@ -158,21 +158,40 @@ class CUI_CCS_Mapper:
             return self.cui_css_map[cui_code]
         # else construct request
         else:
-            import pdb; pdb.set_trace()
+            # get codes
+            rslt_df = self.cui_map[self.cui_map["CUI"] == cui_code]
 
+            # determine if we have any ccs codes
+            ccs_indx = (rslt_df["SAB"] == "CCS_10") & (rslt_df["TTY"] == "SD")
+            icd_10_indx = rslt_df["SAB"] == "ICD10CM"
 
+            if sum(ccs_indx):
+                # directly read codes
+                ccs_lst = rslt_df[ccs_indx]["CODE"].values.astype('int').tolist()
+            elif sum(icd_10_indx):
+                # indirectly read codes
+                icd_codes = np.unique(rslt_df[icd_10_indx]["CODE"].values).tolist()
 
+                # remove period
+                icd_codes = [x.replace(".", "") for x in icd_codes]
 
+                ccs_icd10_df = pd.merge(
+                    pd.DataFrame({"ICD-10-CM_CODE": icd_codes}),
+                    self.ccs_mapping_icd_10,
+                    how = "inner",
+                )
 
+                # determine if we have valid rows
+                if ccs_icd10_df.shape[0]:
+                    ccs_lst = ccs_icd10_df["CCS_CATEGORY"].values.astype('int').tolist()
+                # if icd10 codes associated with ccs, no codes
+                else:
+                    ccs_lst = []
+            # if no ccs codes and no back mapping through icd10, no code
+            else:
+                ccs_lst = []
 
-            # get a new tgt key if necessary
-            if not hasattr(self, "target_link"):
-                self.make_tgt_request()
-
-            # iterate over icd types
-            ccs_lst = self.request_ccs_code(cui_code)
-
-            # find unique codes
+            # remove duplicates
             ccs_lst = list(set(ccs_lst))
 
             # add ccs codes to dictionary
