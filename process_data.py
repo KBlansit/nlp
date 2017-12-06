@@ -20,6 +20,7 @@ from src.run_clamp import run_clamp
 from src.process_named_entity_files import read_all_processed_files
 from src.utility import hot_encode_list, create_data_dir
 
+from gold_std import load_icd9_data
 TEMP_DIR = "tmp_dir"
 OUTPUT_DIR = "processed_data"
 
@@ -180,24 +181,31 @@ def main():
     else:
         tmp_path = TEMP_DIR
 
-    # process named entity files
-    id_dict = read_all_processed_files(tmp_path)
-
     # write new data set and return object
     if cmd_args.data_path is None:
         write_path = create_data_dir(OUTPUT_DIR, 0)
     else:
-        write_path = create_data_dir(OUTPUT_DIR, cmd_args.output)
+        write_path = create_data_dir(OUTPUT_DIR, cmd_args.data_path)
+
+    # process named entity files
+    id_dict = read_all_processed_files(tmp_path)
 
     # make new data directory
     data_file = h5py.File(write_path + "/data.hdf5", "w")
 
+    # get gold standard
+    gld_dict = load_icd9_data(id_dict.keys())
+
     # make training data
     all_x, all_y = create_input_matrix(id_dict, icu_df)
+    gld_x, gld_y = create_input_matrix(gld_dict, icu_df)
 
     # move to hd5f
     data_file['all_x'] = all_x
     data_file['all_y'] = all_y
+
+    data_file['gld_x'] = all_x
+    data_file['gld_y'] = all_y
 
     # close file
     data_file.close()
