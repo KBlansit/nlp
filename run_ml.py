@@ -2,13 +2,16 @@
 
 # import libraries
 import h5py
+import yaml
+import pickle
 import xgboost
 
 import numpy as np
 import pandas as pd
 
+from sklearn.externals import joblib
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import train_test_split, cross_validate
-from sklearn.metrics import accuracy_score, f1_score
 
 # script variables
 DATA_PATH = "processed_data/data/data.hdf5"
@@ -20,12 +23,12 @@ from sklearn.svm import SVR
 # model parameters
 MODEL_PARAMS = {
     # experimental setup
-    "objective": "reg:linear",
+    "objective": "multi:softmax",
     "seed": 87567,
 
     # tree parameters
     "n_estimators": 1000, # number of trees
-    "learning_rate": 0.025,
+    "learning_rate": 0.20,
     "gamma": 7,
     "subsample": 0.5, # closer to 0.5 helps prevent overfitting
     "max_depth": 15,
@@ -47,7 +50,8 @@ def load_stored_data():
     data_f.close()
 
     # trim x data
-    x = x[:, (x.sum(axis=0) != 0)]
+    vld_idx = (x.sum(axis=0) != 0)
+    x = x[:, vld_idx]
 
     # make percentiles
     percentile_000 = np.percentile(tmp_y, 0)
@@ -71,7 +75,21 @@ def load_stored_data():
 
     y = np.where(y_stked)[1]
 
-    return x, y
+    # make time_dict
+    time_dict = {
+        "0": "Under {} hours".format(round(percentile_025 * 24)),
+        "1": "Between {} and {} hours".format(
+            round(percentile_025 * 24),
+            round(percentile_050 * 24),
+        ),
+        "2": "Between {} and {} hours".format(
+            round(percentile_050 * 24),
+            round(percentile_075 * 24),
+        ),
+        "3": "Over {} hours".format(round(percentile_075 * 24)),
+    }
+
+    return x, y, vld_idx, time_dict
 
 def load_gld_std():
     """
@@ -98,12 +116,12 @@ def main():
     main script function
     """
     # load data
-    x, y = load_stored_data()
+    x, y, vld_idx, time_dict = load_stored_data()
 
     # split data
     x_train, x_test, y_train, y_test = train_test_split(
         x, y,
-        test_size = 0.25,
+        test_size = 0.20,
         random_state = 54892,
     )
 
@@ -116,12 +134,29 @@ def main():
     print("\n")
 
     print("Train results")
-    print(accuracy_score(model.predict(x_train), y_train))
+    print(accuracy_score(y_train, model.predict(x_train)))
 
     print("\n")
 
-    print("Test results")
-    print(accuracy_score(model.predict(x_test), y_test))
+    print("Test results:")
+
+    print("Acc:")
+    print(accuracy_score(y_test, model.predict(x_test)))
+
+    print("Macro F1:")
+    print(f1_score(y_test, model.predict(x_test), average="macro"))
+
+    print("Micro F1:")
+    print(f1_score(y_test, model.predict(x_test), average="micro"))
+
+    print("Conf mtx:")
+    print(confusion_matrix(y_test, model.predict(x_test)))
+
+    print("Saving data")
+    pd.DataFrame({"vld_idx":vld_idx}).to_csv("models/valid_idx.csv", index=False)
+    pickle.dump(model, open("models/model.xgb", "wb"))
+    with open("models/time_dict.yaml", "w") as outfile:
+        yaml.dump(time_dict, outfile, default_flow_style=False)
 
 if __name__ == '__main__':
     main()

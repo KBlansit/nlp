@@ -32,3 +32,6 @@ def load_icd9_data(hadm_id_lst):
         gld_dict[curr_id] = curr_df["CCS_CATEGORY"].unique().tolist()
 
     return gld_dict
+
+if __name__ == '__main__':
+    main()

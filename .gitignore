@@ -11,3 +11,5 @@ config_parameters.yaml
 /mappings
 /tmp_dir
 /processed_data
+/input_dir
+/models
