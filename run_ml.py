@@ -14,14 +14,14 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import train_test_split, cross_validate
 
 # script variables
-DATA_PATH = "processed_data/data/data.hdf5"
+data_path = "processed_data/data/data.hdf5"
 
-CV_ITER = 10
+cv_iter = 10
 
-from sklearn.svm import SVR
+from sklearn.svm import svr
 
 # model parameters
-MODEL_PARAMS = {
+model_params = {
     # experimental setup
     "objective": "multi:softmax",
     "seed": 87567,
